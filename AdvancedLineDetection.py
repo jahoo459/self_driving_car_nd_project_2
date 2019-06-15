@@ -117,24 +117,38 @@ def pipeline(raw_img):
     # use gray_undistorted_img
 
     # # For source points I'm grabbing the outer four detected corners
-    src = np.float32([[230, 645], [1080, 645], [710, 450], [570, 450]])
-    offset = 100
+    pts = np.float32([[130, 720], [1210, 720], [700, 450], [585, 450]])
+    offset = 0
 
     copy = np.copy(gray_undistorted_img)
 
-    lines = cv2.polylines(copy, src, thickness= 10)
+    # lines = cv2.polylines(copy, pts, isClosed=False, color=(255, 0, 0), thickness=10)
+    cv2.line(copy, tuple(pts[0]), tuple(pts[1]), (255, 0, 0), 10)
+    cv2.line(copy, tuple(pts[1]), tuple(pts[2]), (255, 0, 0), 10)
+    cv2.line(copy, tuple(pts[2]), tuple(pts[3]), (255, 0, 0), 10)
+    cv2.line(copy, tuple(pts[3]), tuple(pts[0]), (255, 0, 0), 10)
 
-    img_size = gray_undistorted_img.shape
+    plt.figure()
+    plt.imshow(copy)
+
+    img_size = gray_undistorted_img.shape[::-1]
     # # For destination points, I'm arbitrarily choosing some points to be
     # # a nice fit for displaying our warped result
     # # again, not exact, but close enough for our purposes
-    dst = np.float32([[offset, offset], [img_size[0] - offset, offset],
+    dst = np.float32([[offset, img_size[1] - offset],
                       [img_size[0] - offset, img_size[1] - offset],
-                      [offset, img_size[1] - offset]])
+                      [img_size[0] - offset, offset],
+                      [offset, offset]])
+    # dst = np.float32([[offset, offset], [img_size[0] - offset, offset],
+    #                   [img_size[0] - offset, img_size[1] - offset],
+    #                   [offset, img_size[1] - offset]])
     # # Given src and dst points, calculate the perspective transform matrix
-    M = cv2.getPerspectiveTransform(src, dst)
+    M = cv2.getPerspectiveTransform(pts, dst)
     # # Warp the image using OpenCV warpPerspective()
-    warped = cv2.warpPerspective(gray_undistorted_img, M, img_size)
+    warped = cv2.warpPerspective(gray_undistorted_img, M, gray_undistorted_img.shape[::-1])
+    # warped = cv2.warpPerspective(copy, M, copy.shape[::-1])
+    plt.figure()
+    plt.imshow(warped)
 
 
     # * Detect lane pixels and fit to find the lane boundary.
