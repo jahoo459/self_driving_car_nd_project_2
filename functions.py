@@ -69,13 +69,13 @@ def apply_threshold_operations(img):
     combined_binary[(s_binary == 1) | (sxbinary == 1)] = 1
 
     ### VISUALIZATION ###
-    # Plotting thresholded images
-    f, (ax1, ax2) = plt.subplots(1, 2, figsize=(20, 10))
-    ax1.set_title('Stacked thresholds')
-    ax1.imshow(color_binary)
-
-    ax2.set_title('Combined S channel and gradient thresholds')
-    ax2.imshow(combined_binary, cmap='gray')
+    # # Plotting thresholded images
+    # f, (ax1, ax2) = plt.subplots(1, 2, figsize=(20, 10))
+    # ax1.set_title('Stacked thresholds')
+    # ax1.imshow(color_binary)
+    #
+    # ax2.set_title('Combined S channel and gradient thresholds')
+    # ax2.imshow(combined_binary, cmap='gray')
     ### VISUALIZATION ###
 
     return combined_binary
@@ -101,27 +101,28 @@ def apply_perspective_transform(undistored_img, combined_binary):
 
     # Given src and dst points, calculate the perspective transform matrix
     M = cv2.getPerspectiveTransform(pts, dst)
+    Minv = cv2.getPerspectiveTransform(dst, pts)
 
     # Warp the image using OpenCV warpPerspective()
     warped = cv2.warpPerspective(combined_binary, M, combined_binary.shape[::-1])
 
     ### VISUALIZATION ###
-    copy = np.copy(gray_undistored_img)
-
-    cv2.line(copy, tuple(pts[0]), tuple(pts[1]), (255, 0, 0), 2)
-    cv2.line(copy, tuple(pts[1]), tuple(pts[2]), (255, 0, 0), 2)
-    cv2.line(copy, tuple(pts[2]), tuple(pts[3]), (255, 0, 0), 2)
-    cv2.line(copy, tuple(pts[3]), tuple(pts[0]), (255, 0, 0), 2)
-
-    f, (ax1, ax2) = plt.subplots(1, 2, figsize=(20, 10))
-    ax1.set_title('selected points in original image')
-    ax1.imshow(copy, cmap='gray')
-
-    ax2.set_title('image after perspective transform')
-    ax2.imshow(warped, cmap='gray')
+    # copy = np.copy(gray_undistored_img)
+    #
+    # cv2.line(copy, tuple(pts[0]), tuple(pts[1]), (255, 0, 0), 2)
+    # cv2.line(copy, tuple(pts[1]), tuple(pts[2]), (255, 0, 0), 2)
+    # cv2.line(copy, tuple(pts[2]), tuple(pts[3]), (255, 0, 0), 2)
+    # cv2.line(copy, tuple(pts[3]), tuple(pts[0]), (255, 0, 0), 2)
+    #
+    # f, (ax1, ax2) = plt.subplots(1, 2, figsize=(20, 10))
+    # ax1.set_title('selected points in original image')
+    # ax1.imshow(copy, cmap='gray')
+    #
+    # ax2.set_title('image after perspective transform')
+    # ax2.imshow(warped, cmap='gray')
     ### VISUALIZATION ###
 
-    return warped
+    return warped, M, Minv
 
 
 def fit_polynomial_init(binary_warped, lines):
@@ -129,7 +130,7 @@ def fit_polynomial_init(binary_warped, lines):
     leftx, lefty, rightx, righty, out_img = find_lane_pixels_sliding_windows(binary_warped)
 
     # Fit a second order polynomial for both lines
-    left_fit, right_fit, left_fitx, right_fitx, ploty = fit_poly(binary_warped.shape, leftx, lefty, rightx, righty)
+    left_fit, right_fit, left_fitx, right_fitx, ploty, left_fit_cr, right_fit_cr = fit_poly(binary_warped.shape, leftx, lefty, rightx, righty)
 
     # Update the lines
     if(left_fit != []):
@@ -138,45 +139,58 @@ def fit_polynomial_init(binary_warped, lines):
         lines[0].current_fit = left_fit
         lines[0].allx = leftx
         lines[0].ally = lefty
+        lines[0].current_fit_cr = left_fit_cr
+        lines[0].ploty = ploty
     if(right_fit != []):
         lines[1].detected = True
         lines[1].recent_xfitted = right_fitx
         lines[1].current_fit = right_fit
         lines[0].allx = rightx
         lines[0].ally = righty
+        lines[1].current_fit_cr = right_fit_cr
+        lines[1].ploty = ploty
 
     # Colors in the left and right lane regions
     out_img[lefty, leftx] = [255, 0, 0]
     out_img[righty, rightx] = [0, 0, 255]
 
+    ### Visualization ###
     # Plots the left and right polynomials on the lane lines
-    plt.figure()
-    plt.imshow(out_img)
-    plt.plot(left_fitx, ploty, color='yellow')
-    plt.plot(right_fitx, ploty, color='yellow')
+    # plt.figure()
+    # plt.imshow(out_img)
+    # plt.plot(left_fitx, ploty, color='yellow')
+    # plt.plot(right_fitx, ploty, color='yellow')
 
-    # return out_img, left_fit, right_fit, left_fitx, right_fitx, ploty
-
+    ### Visualization ###
 
 def fit_poly(img_shape, leftx, lefty, rightx, righty):
+
+    # Real world dist calculation
+    ym_per_pix = 30 / 720
+    xm_per_pix = 3.7 / 700
+
+    left_fit_cr = np.polyfit(lefty * ym_per_pix, leftx * xm_per_pix, 2)
+    right_fit_cr = np.polyfit(righty *ym_per_pix, rightx *xm_per_pix, 2)
     left_fit = np.polyfit(lefty, leftx, 2)
     right_fit = np.polyfit(righty, rightx, 2)
-
     # Generate x and y values for plotting
     ploty = np.linspace(0, img_shape[0] - 1, img_shape[0])
 
     left_fitx = left_fit[0] * ploty ** 2 + left_fit[1] * ploty + left_fit[2]
     right_fitx = right_fit[0] * ploty ** 2 + right_fit[1] * ploty + right_fit[2]
 
-    return left_fit, right_fit, left_fitx, right_fitx, ploty
+    return left_fit, right_fit, left_fitx, right_fitx, ploty, left_fit_cr, right_fit_cr
 
 
 def find_lane_pixels_sliding_windows(warped):
     # calculate histogram
     histogram = np.sum(warped[warped.shape[0] // 2:, :], axis=0)
+
+    ### Visualize ###
     # Visualize histogram
-    plt.figure()
-    plt.plot(histogram)
+    # plt.figure()
+    # plt.plot(histogram)
+    ### Visualize ###
 
     # Prepare the output (3-channel) image
     out_img = np.dstack((warped, warped, warped)) * 255
@@ -288,9 +302,8 @@ def search_around_poly(binary_warped, lines):
     righty = nonzeroy[right_lane_inds]
 
     # Fit new polynomials
-    left_fitx, right_fitx, ploty = fit_poly(binary_warped.shape, leftx, lefty, rightx, righty)
+    left_fit, right_fit, left_fitx, right_fitx, ploty, left_fit_cr, right_fit_cr = fit_poly(binary_warped.shape, leftx, lefty, rightx, righty)
 
-    ### Visualization ###
     # Create an image to draw on and an image to show the selection window
     out_img = np.dstack((binary_warped, binary_warped, binary_warped)) * 255
     window_img = np.zeros_like(out_img)
@@ -314,9 +327,10 @@ def search_around_poly(binary_warped, lines):
     cv2.fillPoly(window_img, np.int_([right_line_pts]), (0, 255, 0))
     result = cv2.addWeighted(out_img, 1, window_img, 0.3, 0)
 
+    ### Visualization ###
     # Plot the polynomial lines onto the image
-    plt.plot(left_fitx, ploty, color='yellow')
-    plt.plot(right_fitx, ploty, color='yellow')
+    # plt.plot(left_fitx, ploty, color='yellow')
+    # plt.plot(right_fitx, ploty, color='yellow')
     ### Visualization ###
 
     return result
@@ -326,8 +340,7 @@ def measure_curvature_pixels(lines):
     '''
     Calculates the curvature of polynomial functions in pixels.
     '''
-    # Start by generating our fake example data
-    # Make sure to feed in your real data instead in your project!
+
     ploty = lines[0].ally
     left_fit = lines[0].current_fit
     right_fit = lines[1].current_fit
@@ -342,3 +355,53 @@ def measure_curvature_pixels(lines):
 
     lines[0].radius_of_curvature = left_curverad
     lines[1].radius_of_curvature = right_curverad
+
+
+def measure_curvature_real(lines):
+    '''
+    Calculates the curvature of polynomial functions in meters.
+    '''
+    # Define conversions in x and y from pixels space to meters
+    ym_per_pix = 30 / 720  # meters per pixel in y dimension
+    xm_per_pix = 3.7 / 700  # meters per pixel in x dimension
+
+    ploty = lines[0].ploty
+    left_fit_cr = lines[0].current_fit_cr
+    right_fit_cr = lines[1].current_fit_cr
+
+    # Define y-value where we want radius of curvature
+    # We'll choose the maximum y-value, corresponding to the bottom of the image
+    y_eval = np.max(ploty)
+
+    # Calculation of R_curve (radius of curvature)
+    left_curverad = ((1 + (2 * left_fit_cr[0] * y_eval * ym_per_pix + left_fit_cr[1]) ** 2) ** 1.5) / np.absolute(
+        2 * left_fit_cr[0])
+    right_curverad = ((1 + (2 * right_fit_cr[0] * y_eval * ym_per_pix + right_fit_cr[1]) ** 2) ** 1.5) / np.absolute(
+        2 * right_fit_cr[0])
+
+    lines[0].radius_of_curvature_cr = left_curverad
+    lines[1].radius_of_curvature_cr = right_curverad
+
+def reproject_lines(lines, warped, Minv, image):
+    # Create an image to draw the lines on
+    warp_zero = np.zeros_like(warped).astype(np.uint8)
+    color_warp = np.dstack((warp_zero, warp_zero, warp_zero))
+
+    left_fitx = lines[0].recent_xfitted
+    right_fitx = lines[1].recent_xfitted
+    ploty = lines[0].ploty
+
+    # Recast the x and y points into usable format for cv2.fillPoly()
+    pts_left = np.array([np.transpose(np.vstack([left_fitx, ploty]))])
+    pts_right = np.array([np.flipud(np.transpose(np.vstack([right_fitx, ploty])))])
+    pts = np.hstack((pts_left, pts_right))
+
+    # Draw the lane onto the warped blank image
+    cv2.fillPoly(color_warp, np.int_([pts]), (0, 255, 0))
+
+    # Warp the blank back to original image space using inverse perspective matrix (Minv)
+    newwarp = cv2.warpPerspective(color_warp, Minv, (image.shape[1], image.shape[0]))
+    # Combine the result with the original image
+    result = cv2.addWeighted(image, 1, newwarp, 0.3, 0)
+
+    return result
