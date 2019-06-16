@@ -28,6 +28,8 @@ class Line():
     def __init__(self):
         # was the line detected in the last iteration?
         self.detected = False
+        # not detected counter
+        self.detection_counter = 0
         # x values of the last n fits of the line
         self.recent_xfitted = []
         #average x values of the fitted line over the last n iterations
@@ -36,6 +38,8 @@ class Line():
         self.best_fit = None
         #polynomial coefficients for the most recent fit
         self.current_fit = [np.array([False])]
+        #polynomial coefficients for the previous fit
+        self.previous_fit = [np.array([False])]
         # polynomial coefficients for the most recent fit in world distance
         self.current_fit_cr = [np.array([False])]
         #radius of curvature of the line in pixel
@@ -51,6 +55,7 @@ class Line():
         #y values for detected line pixels
         self.ally = None
         self.ploty = None
+        self.dist_from_center_m = 0
 
 
 def pipeline(raw_img):
@@ -65,14 +70,13 @@ def pipeline(raw_img):
     warped_img, M, Minv = apply_perspective_transform(undistorted_img, combined_binary)
 
     # Initially fit polynomial using sliding windows approach (only in first step)
-    # if(lines[0].detected == False or lines[1].detected == False):
-    # out_img, left_fit, right_fit, left_fitx, right_fitx, ploty = fit_polynomial_init(warped_img, lines)
-    fit_polynomial_init(warped_img, lines)
+    if(lines[0].detected == False or lines[1].detected == False):
+        fit_polynomial_init(warped_img, lines)
 
-    # else:
+    else:
         # In the next steps try to search for a line in a defined area close
         # to previously detected line
-        # result = search_around_poly(warped_img, lines)
+        search_around_poly(warped_img, lines)
 
     # * Determine the curvature of the lane and vehicle position with respect to center.
     # measure_curvature_pixels(lines)
@@ -81,6 +85,8 @@ def pipeline(raw_img):
     # * Warp the detected lane boundaries back onto the original image.
     final_img = reproject_lines(lines, warped_img, Minv, raw_img)
     # * Output visual display of the lane boundaries and numerical estimation of lane curvature and vehicle position.
+    final_img = write_measured_info(final_img, lines)
+
     return final_img
 
 
@@ -122,8 +128,8 @@ if __name__ == '__main__':
     # calibrate camera only once
     ret, mtx, dist, rvecs, tvecs = calibrateCamera()
 
-    # run_on_images()
-    run_on_video()
+    # run_on_video()
+    run_on_images()
 
 
 

@@ -2,7 +2,12 @@ import numpy as np
 import cv2
 import glob
 import matplotlib.pyplot as plt
+from AdvancedLineDetection import Line
 
+# Global variables
+# Real world dist calculation
+ym_per_pix = 30 / 720
+xm_per_pix = 3.7 / 700
 
 def bgr2rgb(rgb_img):
     return cv2.cvtColor(rgb_img, cv2.COLOR_BGR2RGB)
@@ -69,7 +74,7 @@ def apply_threshold_operations(img):
     combined_binary[(s_binary == 1) | (sxbinary == 1)] = 1
 
     ### VISUALIZATION ###
-    # # Plotting thresholded images
+    # Plotting thresholded images
     # f, (ax1, ax2) = plt.subplots(1, 2, figsize=(20, 10))
     # ax1.set_title('Stacked thresholds')
     # ax1.imshow(color_binary)
@@ -87,7 +92,8 @@ def apply_perspective_transform(undistored_img, combined_binary):
     gray_undistored_img = cv2.cvtColor(undistored_img, cv2.COLOR_BGR2GRAY)
 
     # Select the soruce points on original image
-    pts = np.float32([[130, 720], [1210, 720], [700, 450], [585, 450]])
+    # pts = np.float32([[130, 720], [1210, 720], [700, 450], [585, 450]])
+    pts = np.float32([[231, 690], [1075, 690], [713, 465], [570, 465]])
 
     # define offset
     offset = 200
@@ -118,37 +124,24 @@ def apply_perspective_transform(undistored_img, combined_binary):
     # ax1.set_title('selected points in original image')
     # ax1.imshow(copy, cmap='gray')
     #
+    # warped_visu = cv2.warpPerspective(copy, M, copy.shape[::-1])
     # ax2.set_title('image after perspective transform')
-    # ax2.imshow(warped, cmap='gray')
+    # ax2.imshow(warped_visu, cmap='gray')
     ### VISUALIZATION ###
 
     return warped, M, Minv
 
 
-def fit_polynomial_init(binary_warped, lines):
+def fit_polynomial_init(binary_warped, lines: Line):
     # Find our lane pixels first using sliding windows approach
     leftx, lefty, rightx, righty, out_img = find_lane_pixels_sliding_windows(binary_warped)
 
     # Fit a second order polynomial for both lines
-    left_fit, right_fit, left_fitx, right_fitx, ploty, left_fit_cr, right_fit_cr = fit_poly(binary_warped.shape, leftx, lefty, rightx, righty)
+    left_fit, right_fit, left_fitx, right_fitx, ploty, left_fit_cr, right_fit_cr, offset_m = fit_poly(binary_warped.shape, leftx, lefty, rightx, righty)
 
     # Update the lines
-    if(left_fit != []):
-        lines[0].detected = True
-        lines[0].recent_xfitted = left_fitx
-        lines[0].current_fit = left_fit
-        lines[0].allx = leftx
-        lines[0].ally = lefty
-        lines[0].current_fit_cr = left_fit_cr
-        lines[0].ploty = ploty
-    if(right_fit != []):
-        lines[1].detected = True
-        lines[1].recent_xfitted = right_fitx
-        lines[1].current_fit = right_fit
-        lines[0].allx = rightx
-        lines[0].ally = righty
-        lines[1].current_fit_cr = right_fit_cr
-        lines[1].ploty = ploty
+    update_lines(lines, left_fit, right_fit, leftx, rightx,
+                 lefty, righty, left_fitx, right_fitx, left_fit_cr, right_fit_cr, ploty, offset_m)
 
     # Colors in the left and right lane regions
     out_img[lefty, leftx] = [255, 0, 0]
@@ -163,23 +156,32 @@ def fit_polynomial_init(binary_warped, lines):
 
     ### Visualization ###
 
-def fit_poly(img_shape, leftx, lefty, rightx, righty):
 
-    # Real world dist calculation
-    ym_per_pix = 30 / 720
-    xm_per_pix = 3.7 / 700
+def fit_poly(img_shape, leftx, lefty, rightx, righty):
 
     left_fit_cr = np.polyfit(lefty * ym_per_pix, leftx * xm_per_pix, 2)
     right_fit_cr = np.polyfit(righty *ym_per_pix, rightx *xm_per_pix, 2)
+
     left_fit = np.polyfit(lefty, leftx, 2)
     right_fit = np.polyfit(righty, rightx, 2)
+
     # Generate x and y values for plotting
     ploty = np.linspace(0, img_shape[0] - 1, img_shape[0])
 
     left_fitx = left_fit[0] * ploty ** 2 + left_fit[1] * ploty + left_fit[2]
     right_fitx = right_fit[0] * ploty ** 2 + right_fit[1] * ploty + right_fit[2]
 
-    return left_fit, right_fit, left_fitx, right_fitx, ploty, left_fit_cr, right_fit_cr
+    # Calculate distance of the car from the center of the line
+    # Assumption: center of the car is pixel 1280/2 = 640
+    center = 640
+    # The value is calucalte for y = 719 (closest to the bottom of the image)
+    offset_left = (center - left_fitx[-1])
+    offset_right = (right_fitx[-1] - center)
+    offset_m = (offset_left - offset_right) * xm_per_pix
+
+
+
+    return left_fit, right_fit, left_fitx, right_fitx, ploty, left_fit_cr, right_fit_cr, offset_m
 
 
 def find_lane_pixels_sliding_windows(warped):
@@ -273,8 +275,41 @@ def find_lane_pixels_sliding_windows(warped):
 
     return leftx, lefty, rightx, righty, out_img
 
+def update_lines(lines: Line, left_fit, right_fit, leftx, rightx,
+                 lefty, righty, left_fitx, right_fitx, left_fit_cr, right_fit_cr, ploty, offset_m):
+    if (left_fit != []): # Line was detected
+        lines[0].detected = True
+        lines[0].detetction_counter = 0
+        lines[0].previous_fit = lines[0].current_fit
+        lines[0].recent_xfitted = left_fitx
+        lines[0].current_fit = left_fit
+        lines[0].allx = leftx
+        lines[0].ally = lefty
+        lines[0].current_fit_cr = left_fit_cr
+        lines[0].ploty = ploty
+        lines[0].dist_from_center_m = offset_m
+    else: #Line wasn't detected
+        lines[0].detected = False
+        lines[0].detection_counter =+ 1
+        # lines[0].current_fit = lines[0].previous_fit
 
-def search_around_poly(binary_warped, lines):
+    if (right_fit != []):
+        lines[1].detected = True
+        lines[1].detetction_counter = 0
+        lines[1].previous_fit = lines[0].current_fit
+        lines[1].recent_xfitted = right_fitx
+        lines[1].current_fit = right_fit
+        lines[0].allx = rightx
+        lines[0].ally = righty
+        lines[1].current_fit_cr = right_fit_cr
+        lines[1].ploty = ploty
+        lines[1].dist_from_center_m = offset_m
+    else:
+        lines[1].detected = False
+        lines[1].detection_counter =+ 1
+        # lines[0].current_fit = lines[0].previous_fit
+
+def search_around_poly(binary_warped, lines: Line):
     # Choose the width of the margin around the previous polynomial to search
     margin = 100
 
@@ -302,7 +337,11 @@ def search_around_poly(binary_warped, lines):
     righty = nonzeroy[right_lane_inds]
 
     # Fit new polynomials
-    left_fit, right_fit, left_fitx, right_fitx, ploty, left_fit_cr, right_fit_cr = fit_poly(binary_warped.shape, leftx, lefty, rightx, righty)
+    left_fit, right_fit, left_fitx, right_fitx, ploty, left_fit_cr, right_fit_cr, offset_m = fit_poly(binary_warped.shape, leftx, lefty, rightx, righty)
+
+    # Update the lines status
+    update_lines(lines, left_fit, right_fit, leftx, rightx,
+                 lefty, righty, left_fitx, right_fitx, left_fit_cr, right_fit_cr, ploty, offset_m)
 
     # Create an image to draw on and an image to show the selection window
     out_img = np.dstack((binary_warped, binary_warped, binary_warped)) * 255
@@ -332,8 +371,6 @@ def search_around_poly(binary_warped, lines):
     # plt.plot(left_fitx, ploty, color='yellow')
     # plt.plot(right_fitx, ploty, color='yellow')
     ### Visualization ###
-
-    return result
 
 
 def measure_curvature_pixels(lines):
@@ -405,3 +442,36 @@ def reproject_lines(lines, warped, Minv, image):
     result = cv2.addWeighted(image, 1, newwarp, 0.3, 0)
 
     return result
+
+def write_measured_info(img, lines):
+    curvature_left = lines[0].radius_of_curvature_cr
+    curvature_right = lines[1].radius_of_curvature_cr
+    dist_from_center = lines[0].dist_from_center_m
+
+    font = cv2.FONT_HERSHEY_SIMPLEX
+    bottomLeftCornerY = 100
+    bottomLeftCornerX = 10
+    delta = 50
+    fontScale = 1
+    fontColor = (255,255,255)
+    lineType = 2
+
+    text = []
+    if(curvature_left > 5000):
+        text.append("Radius Left: inf")
+    else:
+        text.append(str("Radius Left: " + str(int(curvature_left)) + "m."))
+    if(curvature_right > 5000):
+        text.append("Radius right: inf")
+    else:
+        text.append(str("Radius right: " + str(int(curvature_right)) + "m."))
+    text.append(str("Distance from center: " + str("{:.3f}".format(dist_from_center)) + "m."))
+
+    # bottom left corner changes
+    blc = [bottomLeftCornerX, 0]
+    # Draw text on the image
+    for i in range(len(text)):
+        blc[1] = bottomLeftCornerY + i * delta
+        cv2.putText(img, text[i], tuple(blc), font, fontScale, fontColor, lineType)
+
+    return img
