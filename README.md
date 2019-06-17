@@ -168,3 +168,17 @@ below the output for the project test images and video is presented. As can be s
 ### Project Video
 
 <a href="https://www.youtube.com/watch?feature=player_embedded&v=Hc3cDUYkAg0" target="_blank"> Watch video on YouTube</a>
+
+
+### Discussion about limitation of the system
+
+The algorithm is working stable on the project video but it is relatively simple compared to some real world scenarios. One of the
+biggest limitation of this pipeline is working on tight curves - in such situation, especially for not continues lines the line won't
+be correctly detected. The algorithm is also not resistant to some additional paintings on the street. It may happen, that
+when there is a certain painting on the road, the histogram analysis might treat is as a line. In that case the line won't be created in the
+right place.
+
+Possible improvements to the algorithm might include:
+1. Checking whether the width of the line is in correct range
+2. Comparing the newly created line to the previous one and checking for big differences
+3. Checking whether the lines are parallel
