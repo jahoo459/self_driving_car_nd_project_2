@@ -67,7 +67,6 @@ def apply_threshold_operations(img):
     s_thres = (90, 255)
     s_binary = np.zeros_like(S)
     s_binary[(S > s_thres[0]) & (S <= s_thres[1])] = 1
-    color_binary = np.dstack((np.zeros_like(sxbinary), sxbinary, s_binary)) * 255
 
     # Combine the two binary thresholds
     combined_binary = np.zeros_like(sxbinary)
@@ -148,10 +147,10 @@ def fit_polynomial_init(binary_warped, lines: Line):
 
     ### Visualization ###
     # Plots the left and right polynomials on the lane lines
-    # plt.figure()
-    # plt.imshow(out_img)
-    # plt.plot(left_fitx, ploty, color='yellow')
-    # plt.plot(right_fitx, ploty, color='yellow')
+    plt.figure()
+    plt.imshow(out_img)
+    plt.plot(left_fitx, ploty, color='yellow')
+    plt.plot(right_fitx, ploty, color='yellow')
 
     ### Visualization ###
 
@@ -173,7 +172,7 @@ def fit_poly(img_shape, leftx, lefty, rightx, righty):
     # Calculate distance of the car from the center of the line
     # Assumption: center of the car is pixel 1280/2 = 640
     center = 640
-    # The value is calucalte for y = 719 (closest to the bottom of the image)
+    # The value is calculated for y = 719 (closest to the bottom of the image)
     offset_left = (center - left_fitx[-1])
     offset_right = (right_fitx[-1] - center)
     offset_m = (offset_left - offset_right) * xm_per_pix

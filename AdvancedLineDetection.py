@@ -116,9 +116,9 @@ def run_on_video():
     harder_challenge_video_path = "harder_challenge_video.mp4"
     harder_challenge_video_path_output = "harder_challenge_video_output.mp4"
 
-    clip1 = VideoFileClip(challenge_video_path)
+    clip1 = VideoFileClip(project_video_path)
     white_clip = clip1.fl_image(pipeline)
-    white_clip.write_videofile(challenge_video_path_output, audio=False)
+    white_clip.write_videofile(project_video_path_output, audio=False)
 
 if __name__ == '__main__':
 
