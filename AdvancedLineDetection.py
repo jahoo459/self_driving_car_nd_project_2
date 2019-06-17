@@ -1,4 +1,5 @@
 ## Advanced Lane Finding Project
+from functions import *
 
 # Global variables for camera calibration
 ret = 0
@@ -6,23 +7,6 @@ mtx = 0
 dist = 0
 rvecs = 0
 tvecs = 0
-
-
-
-# The goals / steps of this project are the following:
-#
-# * Compute the camera calibration matrix and distortion coefficients given a set of chessboard images.
-# * Apply a distortion correction to raw images.
-# * Use color transforms, gradients, etc., to create a thresholded binary image.
-# * Apply a perspective transform to rectify binary image ("birds-eye view").
-# * Detect lane pixels and fit to find the lane boundary.
-# * Determine the curvature of the lane and vehicle position with respect to center.
-# * Warp the detected lane boundaries back onto the original image.
-# * Output visual display of the lane boundaries and numerical estimation of lane curvature and vehicle position.
-
-## First, I'll calibrate the camera using chessboard images
-
-from functions import *
 
 class Line():
     def __init__(self):
@@ -47,7 +31,7 @@ class Line():
         # radius of curvature of the line in meter
         self.radius_of_curvature_cr = None
         #distance in meters of vehicle center from the line
-        self.line_base_pos = None
+        self.dist_from_center_m = 0
         #difference in fit coefficients between last and new fits
         self.diffs = np.array([0,0,0], dtype='float')
         #x values for detected line pixels
@@ -55,7 +39,6 @@ class Line():
         #y values for detected line pixels
         self.ally = None
         self.ploty = None
-        self.dist_from_center_m = 0
 
 
 def pipeline(raw_img):
@@ -90,7 +73,6 @@ def pipeline(raw_img):
     return final_img
 
 
-
 def run_on_images():
     # Run for all test images and seve the output in output_images
     images = glob.glob('test_images/*.jpg')
@@ -104,21 +86,18 @@ def run_on_images():
 
         cv2.imwrite('output_images/' + 'result_' + name, result)
 
+
 def run_on_video():
     # Import everything needed to edit/save/watch video clips
     from moviepy.editor import VideoFileClip
-    from IPython.display import HTML
 
     project_video_path = "project_video.mp4"
     project_video_path_output = "project_video_output.mp4"
-    challenge_video_path = "challenge_video.mp4"
-    challenge_video_path_output = "challenge_video_output.mp4"
-    harder_challenge_video_path = "harder_challenge_video.mp4"
-    harder_challenge_video_path_output = "harder_challenge_video_output.mp4"
 
     clip1 = VideoFileClip(project_video_path)
     white_clip = clip1.fl_image(pipeline)
     white_clip.write_videofile(project_video_path_output, audio=False)
+
 
 if __name__ == '__main__':
 
@@ -129,7 +108,7 @@ if __name__ == '__main__':
     ret, mtx, dist, rvecs, tvecs = calibrateCamera()
 
     run_on_video()
-    # run_on_images()
+    run_on_images()
 
 
 

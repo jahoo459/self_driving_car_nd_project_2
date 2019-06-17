@@ -9,6 +9,7 @@ from AdvancedLineDetection import Line
 ym_per_pix = 30 / 720
 xm_per_pix = 3.7 / 700
 
+
 def bgr2rgb(rgb_img):
     return cv2.cvtColor(rgb_img, cv2.COLOR_BGR2RGB)
 
@@ -151,7 +152,6 @@ def fit_polynomial_init(binary_warped, lines: Line):
     plt.imshow(out_img)
     plt.plot(left_fitx, ploty, color='yellow')
     plt.plot(right_fitx, ploty, color='yellow')
-
     ### Visualization ###
 
 
@@ -176,8 +176,6 @@ def fit_poly(img_shape, leftx, lefty, rightx, righty):
     offset_left = (center - left_fitx[-1])
     offset_right = (right_fitx[-1] - center)
     offset_m = (offset_left - offset_right) * xm_per_pix
-
-
 
     return left_fit, right_fit, left_fitx, right_fitx, ploty, left_fit_cr, right_fit_cr, offset_m
 
@@ -273,6 +271,7 @@ def find_lane_pixels_sliding_windows(warped):
 
     return leftx, lefty, rightx, righty, out_img
 
+
 def update_lines(lines: Line, left_fit, right_fit, leftx, rightx,
                  lefty, righty, left_fitx, right_fitx, left_fit_cr, right_fit_cr, ploty, offset_m):
     if (left_fit != []): # Line was detected
@@ -288,8 +287,6 @@ def update_lines(lines: Line, left_fit, right_fit, leftx, rightx,
         lines[0].dist_from_center_m = offset_m
     else: #Line wasn't detected
         lines[0].detected = False
-        lines[0].detection_counter =+ 1
-        # lines[0].current_fit = lines[0].previous_fit
 
     if (right_fit != []):
         lines[1].detected = True
@@ -304,10 +301,10 @@ def update_lines(lines: Line, left_fit, right_fit, leftx, rightx,
         lines[1].dist_from_center_m = offset_m
     else:
         lines[1].detected = False
-        lines[1].detection_counter =+ 1
-        # lines[0].current_fit = lines[0].previous_fit
+
 
 def search_around_poly(binary_warped, lines: Line):
+
     # Choose the width of the margin around the previous polynomial to search
     margin = 100
 
@@ -371,27 +368,6 @@ def search_around_poly(binary_warped, lines: Line):
     ### Visualization ###
 
 
-def measure_curvature_pixels(lines):
-    '''
-    Calculates the curvature of polynomial functions in pixels.
-    '''
-
-    ploty = lines[0].ally
-    left_fit = lines[0].current_fit
-    right_fit = lines[1].current_fit
-
-    # Define y-value where we want radius of curvature
-    # We'll choose the maximum y-value, corresponding to the bottom of the image
-    y_eval = np.max(ploty)
-
-    # Calculation of R_curve (radius of curvature)
-    left_curverad = ((1 + (2 * left_fit[0] * y_eval + left_fit[1]) ** 2) ** 1.5) / np.absolute(2 * left_fit[0])
-    right_curverad = ((1 + (2 * right_fit[0] * y_eval + right_fit[1]) ** 2) ** 1.5) / np.absolute(2 * right_fit[0])
-
-    lines[0].radius_of_curvature = left_curverad
-    lines[1].radius_of_curvature = right_curverad
-
-
 def measure_curvature_real(lines):
     '''
     Calculates the curvature of polynomial functions in meters.
@@ -417,6 +393,7 @@ def measure_curvature_real(lines):
     lines[0].radius_of_curvature_cr = left_curverad
     lines[1].radius_of_curvature_cr = right_curverad
 
+
 def reproject_lines(lines, warped, Minv, image):
     # Create an image to draw the lines on
     warp_zero = np.zeros_like(warped).astype(np.uint8)
@@ -440,6 +417,7 @@ def reproject_lines(lines, warped, Minv, image):
     result = cv2.addWeighted(image, 1, newwarp, 0.3, 0)
 
     return result
+
 
 def write_measured_info(img, lines):
     curvature_left = lines[0].radius_of_curvature_cr

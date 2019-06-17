@@ -116,8 +116,6 @@ After the initial detection another function can be used for next frames as ther
 
 3. Fit a new polynomial based on the newly found pixels.
 
-4. After every iteration of the function some basic parameters like curvature or distance to the center are checked. If they values start to get extreme such detection is treated as not reliable and in the next step the sliding window algorithm is used.
-
 ### 5. Measuring curve radius and distance from the centre of the car to the center of the line.
 
 In order to calculate the distance of the car relative to the center of the line I take the X position of the lines and calculate the offset as (functions.py, line 172):
