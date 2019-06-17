@@ -44,8 +44,11 @@ It consists of several steps leading to the final result. All the steps are desc
 This operation is porformed in AdvancedLineDetection.py in line 64.
 
 Image before undistortion:
+
 <img src="./doc/raw_img.png">
+
 Image after undistortion:
+
 <img src="./doc/undistored_img.png">
 
 ### 2. In the second step I do apply gradient and color thresholding in order to extract lines on the image. 
