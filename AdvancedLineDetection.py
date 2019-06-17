@@ -116,9 +116,9 @@ def run_on_video():
     harder_challenge_video_path = "harder_challenge_video.mp4"
     harder_challenge_video_path_output = "harder_challenge_video_output.mp4"
 
-    clip1 = VideoFileClip(project_video_path)
+    clip1 = VideoFileClip(challenge_video_path)
     white_clip = clip1.fl_image(pipeline)
-    white_clip.write_videofile(project_video_path_output, audio=False)
+    white_clip.write_videofile(challenge_video_path_output, audio=False)
 
 if __name__ == '__main__':
 
@@ -128,8 +128,8 @@ if __name__ == '__main__':
     # calibrate camera only once
     ret, mtx, dist, rvecs, tvecs = calibrateCamera()
 
-    # run_on_video()
-    run_on_images()
+    run_on_video()
+    # run_on_images()
 
 
 

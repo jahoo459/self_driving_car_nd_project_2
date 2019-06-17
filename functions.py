@@ -39,7 +39,6 @@ def calibrateCamera():
             imgpoints.append(corners)
 
     # undistort the camera
-
     ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objpoints, imgpoints, gray.shape[::-1], None, None)
 
     return ret, mtx, dist, rvecs, tvecs
@@ -48,6 +47,7 @@ def calibrateCamera():
 def apply_threshold_operations(img):
 
     # input to sobel shall be grayscale undistored image
+    # First convert to hls and go for yellow and white color
     gray_img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
     # Apply threshold on gradient (xsobel)
@@ -92,7 +92,6 @@ def apply_perspective_transform(undistored_img, combined_binary):
     gray_undistored_img = cv2.cvtColor(undistored_img, cv2.COLOR_BGR2GRAY)
 
     # Select the soruce points on original image
-    # pts = np.float32([[130, 720], [1210, 720], [700, 450], [585, 450]])
     pts = np.float32([[231, 690], [1075, 690], [713, 465], [570, 465]])
 
     # define offset
@@ -204,7 +203,7 @@ def find_lane_pixels_sliding_windows(warped):
 
     # HYPERPARAMETERS
     # number of sliding windows
-    nwindows = 15
+    nwindows = 9
     # width of the windows +/- margin
     margin = 80
     # minimum number of pixels found to recenter window
